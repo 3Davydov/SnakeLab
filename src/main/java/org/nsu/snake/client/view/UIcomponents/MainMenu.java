@@ -2,6 +2,7 @@ package org.nsu.snake.client.view.UIcomponents;
 
 import org.nsu.snake.client.view.ClientGUI;
 import org.nsu.snake.model.GameConfig;
+import org.nsu.snake.model.components.GamePlayer;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
@@ -89,18 +90,37 @@ public class MainMenu implements ActionListener{
         this.clientGUI = gui;
     }
 
+    private GameConfig gameConfig;
+    private GamePlayer gamePlayer;
+    private String gameName;
+
     @Override
     public void actionPerformed(ActionEvent e) {
         if (e.getSource() == newGameButton.getButton()) {
             LoginDialog loginDialog = new LoginDialog(mainFrame);
             loginDialog.setVisible(true);
             if (loginDialog.isSucceeded()) {
-                // TODO process it
+                int gridSize = 25;
+                clientGUI.boardView = new BoardView(gameConfig.getWidth(), gameConfig.getHeight(), gridSize,
+                        clientGUI.actionWindow.getWidth() / 2 - (gridSize * gameConfig.getWidth() / 2), gridSize);
+                clientGUI.actionWindow.add(clientGUI.boardView.getField());
+                clientGUI.boardView.getField().repaint();
+                clientGUI.boardView.getField().revalidate();
+
+                //TODO returns false for some reason
+                clientGUI.actionWindow.requestFocusInWindow();
+
+                clientGUI.actionWindow.addKeyListener(clientGUI.actionWindowListener);
+
+                clientGUI.actionWindow.revalidate();
+                clientGUI.mainFrame.revalidate();
+
+                clientGUI.clientMain.startNewGame(gameConfig, gamePlayer, gameName);
             }
         }
         if (e.getSource() == exitButton.getButton()) {
             mainFrame.dispose();
-            // TODO do something with client
+            clientGUI.clientMain.interrupt();
         }
     }
 
@@ -109,6 +129,8 @@ public class MainMenu implements ActionListener{
         private final JTextField gameHeightField;
         private final JTextField gameFoodStaticField;
         private final JTextField gameDelayField;
+        private final JTextField playerNameField;
+        private final JTextField gameNameField;
         private boolean succeeded;
 
         public LoginDialog(JFrame parent) {
@@ -171,17 +193,41 @@ public class MainMenu implements ActionListener{
             cs.gridwidth = 2;
             panel.add(gameDelayField, cs);
 
+            JLabel lbName = new JLabel("Enter name : ");
+            cs.gridx = 0;
+            cs.gridy = 4;
+            cs.gridwidth = 1;
+            panel.add(lbName, cs);
+
+            playerNameField = new JTextField(20);
+            cs.gridx = 1;
+            cs.gridy = 4;
+            cs.gridwidth = 2;
+            panel.add(playerNameField, cs);
+
+            JLabel lbGameName = new JLabel("Enter game name : ");
+            cs.gridx = 0;
+            cs.gridy = 5;
+            cs.gridwidth = 1;
+            panel.add(lbGameName, cs);
+
+            gameNameField = new JTextField(20);
+            cs.gridx = 1;
+            cs.gridy = 5;
+            cs.gridwidth = 2;
+            panel.add(gameNameField, cs);
+
             panel.setBorder(new LineBorder(Color.GRAY));
 
             JButton btnEnter = new JButton("Confirm");
             cs.gridx = 0;
-            cs.gridy = 4;
+            cs.gridy = 6;
             cs.gridwidth = 3;
             panel.add(btnEnter, cs);
 
             JButton btnExit = new JButton("Exit");
             cs.gridx = 0;
-            cs.gridy = 5;
+            cs.gridy = 7;
             cs.gridwidth = 3;
             panel.add(btnExit, cs);
 
@@ -198,8 +244,9 @@ public class MainMenu implements ActionListener{
                         succeeded = false;
                         return;
                     }
-                    GameConfig gameConfig = new GameConfig(getGameWidth(), getGameHeight(), getGameFoodStatic(), getGameDelay());
-                    clientGUI.clientMain.setConfig(gameConfig);
+                    gameConfig = new GameConfig(getGameWidth(), getGameHeight(), getGameFoodStatic(), getGameDelay());
+                    gamePlayer = new GamePlayer(getPlayerName());
+                    gameName = gameNameField.getText();
                     succeeded = true;
                     dispose();
                 }
@@ -232,6 +279,8 @@ public class MainMenu implements ActionListener{
         private int getGameDelay() {
             return Integer.parseInt(gameDelayField.getText());
         }
+
+        private String getPlayerName() {return playerNameField.getText();}
         public boolean isSucceeded() {
             return succeeded;
         }

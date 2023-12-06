@@ -19,17 +19,34 @@ public class ClientSocket {
         multicastSender = new DatagramSocket();
     }
 
-    public void sendMessage(SnakesProto.Example message) throws IOException {
+    public void sendMessage(SnakesProto.GameMessage message) throws IOException {
         byte[] messageBytes = message.toByteArray();
         DatagramPacket packet = new DatagramPacket(messageBytes, messageBytes.length, InetAddress.getByName(ipAddress), port);
         multicastSender.send(packet);
     }
-
-    public SnakesProto.Example getMessage() throws IOException {
+    public SocketAnswer getMessage() throws IOException {
         byte[] buffer = new byte[1024];
         DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
         multicastListener.receive(packet);
         byte[] actualData = Arrays.copyOf(packet.getData(), packet.getLength());
-        return SnakesProto.Example.parseFrom(actualData);
+
+        SocketAnswer answer = new SocketAnswer();
+        answer.gameMessage = SnakesProto.GameMessage.parseFrom(actualData);
+
+        InetAddress addr = packet.getAddress();
+        answer.senderIP = addr.getHostAddress();
+
+        return answer;
+    }
+
+    public class SocketAnswer {
+        public SnakesProto.GameMessage gameMessage;
+        public String senderIP;
+    }
+
+    public static void main(String[] args) throws IOException {
+        ClientSocket clientSocket = new ClientSocket();
+
+
     }
 }

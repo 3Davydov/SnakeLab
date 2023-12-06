@@ -11,6 +11,13 @@ public class GameConfig {
         foodStatic = newFoodStatic;
         stateDelayMs = newDelay;
     }
+
+    public GameConfig(GameConfig src) {
+        this.width = src.getWidth();
+        this.height = src.getHeight();
+        this.foodStatic = src.getFoodStatic();
+        this.stateDelayMs = src.getStateDelayMs();
+    }
     public GameConfig() {}
     public int getWidth() {return this.width;}
     public int getHeight() {return this.height;}
