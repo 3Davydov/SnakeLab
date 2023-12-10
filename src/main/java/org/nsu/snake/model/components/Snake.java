@@ -93,9 +93,6 @@ public class Snake {
                 oldHead.x = 0;
             }
         }
-//        for (int i = body.size() - 1; i > 1; i--) {
-//            body.set(i, body.get(i - 1));
-//        }
 
         body.add(0, newHead);
         body.remove(body.size() - 1);
@@ -148,6 +145,9 @@ public class Snake {
         System.out.println();
     }
 
+    public void setDirection(Direction newDirection) {
+        this.direction = newDirection;
+    }
     public Direction getDirection() {
         return this.direction;
     }

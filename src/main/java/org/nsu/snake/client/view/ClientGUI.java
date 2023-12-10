@@ -2,15 +2,21 @@ package org.nsu.snake.client.view;
 
 import org.nsu.snake.client.ClientMain;
 import org.nsu.snake.client.view.UIcomponents.BoardView;
+import org.nsu.snake.client.view.UIcomponents.GamesListView;
 import org.nsu.snake.client.view.UIcomponents.MainMenu;
+import org.nsu.snake.model.GameConfig;
 import org.nsu.snake.model.ModelMain;
 import org.nsu.snake.model.components.Direction;
+import org.nsu.snake.model.components.GameInfo;
+import org.nsu.snake.model.components.NodeRole;
 import org.nsu.snake.proto.compiled_proto.SnakesProto;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
+import java.io.IOException;
+import java.util.ArrayList;
 
 public class ClientGUI {
     public JFrame mainFrame;
@@ -19,7 +25,8 @@ public class ClientGUI {
     public JPanel actionWindow;
     private JPanel choiseWindow;
     private MainMenu mainMenu;
-    public BoardView boardView;
+    private GamesListView gamesListView;
+    public BoardView boardView = null;
     public ClientMain clientMain;
     public KeyListener actionWindowListener;
 
@@ -52,6 +59,8 @@ public class ClientGUI {
 
         mainMenu = new MainMenu(mainFrame, this);
         mainMenu.showMenu();
+
+        gamesListView = new GamesListView(this, mainFrame);
 
         actionWindow.setBackground(Color.GRAY);
         actionWindow.setLayout(new BorderLayout());
@@ -92,6 +101,13 @@ public class ClientGUI {
                     if (staticDirection != Direction.DOWN)
                         currentDirection = Direction.UP;
                 }
+                if (clientMain.getNodeRole().equals(NodeRole.NORMAL)) {
+                    try {
+                        clientMain.sendSteerMessage();
+                    } catch (IOException ex) {
+                        throw new RuntimeException(ex);
+                    }
+                }
             }
         };
     }
@@ -101,8 +117,49 @@ public class ClientGUI {
         actionWindow.repaint();
     }
 
+    public void showGamesList(ArrayList<GameInfo> data) {
+        actionWindow.removeAll();
+        gamesListView.getTable().setSize(actionWindow.getWidth(), actionWindow.getHeight());
+        actionWindow.add(gamesListView.getTable(), BorderLayout.CENTER);
+        gamesListView.printTable(data);
+        actionWindow.revalidate();
+        actionWindow.repaint();
+
+        mainWindow.revalidate();
+        mainWindow.repaint();
+    }
+
     public Direction getCurrentDirection() {
         staticDirection = currentDirection;
         return this.staticDirection;
+    }
+
+    public void returnToPrevView() {
+        actionWindow.removeAll();
+        actionWindow.setBackground(Color.GRAY);
+        actionWindow.revalidate();
+        actionWindow.repaint();
+
+        mainWindow.revalidate();
+        mainWindow.repaint();
+
+    }
+
+    public void paintFieldAtFirst(GameConfig gameConfig) {
+        returnToPrevView();
+        int gridSize = 25;
+        boardView = new BoardView(gameConfig.getWidth(), gameConfig.getHeight(), gridSize,
+                actionWindow.getWidth() / 2 - (gridSize * gameConfig.getWidth() / 2), gridSize);
+        actionWindow.add(boardView.getField());
+        boardView.getField().repaint();
+        boardView.getField().revalidate();
+
+        // TODO returns false for some reason
+        actionWindow.requestFocusInWindow();
+
+        actionWindow.addKeyListener(actionWindowListener);
+
+        actionWindow.revalidate();
+        mainFrame.revalidate();
     }
 }

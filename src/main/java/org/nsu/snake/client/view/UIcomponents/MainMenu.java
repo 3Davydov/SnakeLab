@@ -100,27 +100,18 @@ public class MainMenu implements ActionListener{
             LoginDialog loginDialog = new LoginDialog(mainFrame);
             loginDialog.setVisible(true);
             if (loginDialog.isSucceeded()) {
-                int gridSize = 25;
-                clientGUI.boardView = new BoardView(gameConfig.getWidth(), gameConfig.getHeight(), gridSize,
-                        clientGUI.actionWindow.getWidth() / 2 - (gridSize * gameConfig.getWidth() / 2), gridSize);
-                clientGUI.actionWindow.add(clientGUI.boardView.getField());
-                clientGUI.boardView.getField().repaint();
-                clientGUI.boardView.getField().revalidate();
-
-                //TODO returns false for some reason
-                clientGUI.actionWindow.requestFocusInWindow();
-
-                clientGUI.actionWindow.addKeyListener(clientGUI.actionWindowListener);
-
-                clientGUI.actionWindow.revalidate();
-                clientGUI.mainFrame.revalidate();
-
+                clientGUI.paintFieldAtFirst(gameConfig);
                 clientGUI.clientMain.startNewGame(gameConfig, gamePlayer, gameName);
+            }
+        }
+        if (e.getSource() == gameListButton.getButton()) {
+            if (clientGUI.boardView == null) { // TODO придется занулять это поле после выхода из игры
+                clientGUI.showGamesList(clientGUI.clientMain.getGamesAround());
             }
         }
         if (e.getSource() == exitButton.getButton()) {
             mainFrame.dispose();
-            clientGUI.clientMain.interrupt();
+            // TODO останавливать все scheduled таймеры
         }
     }
 

@@ -9,24 +9,30 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 
 public class CollisionResolver {
-    public boolean isNextSnakeStateIntersectsSnake(Cell nextHeadPosition, Direction direction, ArrayList<Snake> snakes) {
-        switch (direction) {
-            case UP -> nextHeadPosition.y -= 1;
-            case DOWN -> nextHeadPosition.y += 1;
-            case RIGHT -> nextHeadPosition.x += 1;
-            case LEFT -> nextHeadPosition.x -= 1;
-        }
-
+    public ResolverAnswer isSnakeIntersectsSnake(Snake snake, ArrayList<Snake> snakes) {
         for (int i = 0; i < snakes.size(); i++) {
             Snake nextSnake = snakes.get(i);
             Cell cell = new Cell(0, 0);
             for (int j = 0; j < nextSnake.getBody().size(); j++) {
                 cell.x += nextSnake.getBody().get(j).x;
                 cell.y += nextSnake.getBody().get(j).y;
-                if ((cell.x == nextHeadPosition.x) && (cell.y == nextHeadPosition.y)) return true;
+                if ((cell.x == snake.getBody().get(0).x) && (cell.y == snake.getBody().get(0).y)) {
+                    if (nextSnake.equals(snake) && j == 0) continue;
+                    else {
+                        ResolverAnswer answer = new ResolverAnswer();
+                        answer.isIntersects = true;
+                        if (! nextSnake.equals(snake)) answer.whichIntersect = nextSnake;
+                        else answer.whichIntersect = null;
+                        return answer;
+                    }
+                }
             }
         }
-        return false;
+
+        ResolverAnswer answer = new ResolverAnswer();
+        answer.isIntersects = false;
+        answer.whichIntersect = null;
+        return answer;
     }
     public ResolverAnswer isNextSnakeStateIntersectsFood(Cell nextHeadPosition, Direction direction, ArrayList<Food> food) {
         switch (direction) {

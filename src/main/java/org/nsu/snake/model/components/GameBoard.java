@@ -2,6 +2,8 @@ package org.nsu.snake.model.components;
 
 import org.nsu.snake.model.CollisionResolver;
 import org.nsu.snake.model.GameConfig;
+import org.nsu.snake.model.ModelMain;
+import org.nsu.snake.proto.compiled_proto.SnakesProto;
 import org.w3c.dom.Node;
 
 import java.util.*;
@@ -11,14 +13,14 @@ public class GameBoard {
     private List<Snake> snakes;
     private List<Food> foods;
     private Map<Snake, GamePlayer> gamePlayerMap;
-    private Map<GamePlayer, NodeRole> gamePlayerNodeRoleMap;
     private int nextID = 1;
     private CollisionResolver collisionResolver;
-
     private String gameName;
+    private ModelMain modelMain;
 
-    public GameBoard(GameConfig gameConfig, GamePlayer gamePlayer, NodeRole role, String gameName) {
+    public GameBoard(GameConfig gameConfig, GamePlayer gamePlayer, NodeRole role, String gameName, ModelMain modelMain) {
         this.gameConfig = gameConfig;
+        this.modelMain = modelMain;
         this.gameName = gameName;
         snakes = new ArrayList<>();
         foods = new ArrayList<>();
@@ -32,11 +34,9 @@ public class GameBoard {
         gamePlayer.setID(nextID);
         nextID++;
         gamePlayer.setNodeRole(role);
+        gamePlayer.setDirection(Direction.LEFT);
         gamePlayerMap = new HashMap<>();
         gamePlayerMap.put(firstSnake, gamePlayer);
-
-        gamePlayerNodeRoleMap = new HashMap<>();
-        gamePlayerNodeRoleMap.put(gamePlayer, role);
 
         for (int i = 0; i < gameConfig.getFoodStatic() + 1; i++) {
             Cell randFoodCell = new Cell((random.nextInt() % gameConfig.getWidth() + gameConfig.getWidth()) % gameConfig.getWidth(),
@@ -47,6 +47,18 @@ public class GameBoard {
         }
     }
 
+    public GameBoard(GameConfig gameConfig, String gameName, ModelMain modelMain, SnakesProto.GameMessage sourceGame) {
+        this.gameConfig = gameConfig;
+        this.modelMain = modelMain;
+        this.gameName = gameName;
+
+//        snakes = new ArrayList<>();
+//        gamePlayerMap = new HashMap<>();
+//        ArrayList<SnakesProto.GameState.Snake> srcSnakes = new ArrayList<>(sourceGame.getState().getState().getSnakesList());
+//        for (int i = 0; i < srcSnakes.size(); i++) {
+//            snakes.add(new Snake())
+//        }
+    }
     private  <K, V> K getKeyByValue(Map<K, V> map, V value) {
         for (Map.Entry<K, V> entry : map.entrySet()) {
             if (Objects.equals(value, entry.getValue())) {
@@ -55,30 +67,55 @@ public class GameBoard {
         }
         return null;
     }
-    public void calculateNextState(Direction direction, GamePlayer gamePlayer) {
-        Snake snake = getKeyByValue(gamePlayerMap, gamePlayer);
-        assert snake != null;
-        Cell head = new Cell(snake.getBody().get(0));
+    public void calculateNextState() {
+        ArrayList<Food> foodToRemove = new ArrayList<>();
+        // Calculate next head position for each snake
+        for (int i = 0; i < snakes.size(); i++) {
+            Snake nextSnake = snakes.get(i);
+            Cell head = new Cell(nextSnake.getBody().get(0));
 
-        if (collisionResolver.isNextSnakeStateIntersectsSnake(new Cell(head), direction, getSnakes())) {
-            gamePlayerMap.remove(snake);
-            snakes.remove(snake);
+            CollisionResolver.ResolverAnswer ans = collisionResolver.isNextSnakeStateIntersectsFood(head, nextSnake.getDirection(), getFoods());
+            if (ans.isIntersects) {
+                nextSnake.addPoint(nextSnake.getDirection());
+                foodToRemove.add((Food) ans.whichIntersect);
+                gamePlayerMap.get(nextSnake).incrementScore();
+            }
+            else nextSnake.moveSnake(nextSnake.getDirection());
+        }
+
+        // Find out which snakes intersects each other
+        ArrayList<Snake> snakesToRemove = new ArrayList<>();
+        for (int i = 0; i < snakes.size(); i++) {
+            Snake nextSnake = snakes.get(i);
+            CollisionResolver.ResolverAnswer answer = collisionResolver.isSnakeIntersectsSnake(nextSnake, getSnakes());
+            if (answer.isIntersects) {
+                snakesToRemove.add(nextSnake);
+                if (answer.whichIntersect != null) gamePlayerMap.get((Snake) answer.whichIntersect).incrementScore();
+            }
+        }
+
+        // Remove eaten food and intersected snakes
+        for (int i = 0; i < snakesToRemove.size(); i++) {
+            Snake nextSnake = snakesToRemove.get(i);
+            GamePlayer lost = gamePlayerMap.get(nextSnake);
+            gamePlayerMap.remove(nextSnake);
+            snakes.remove(nextSnake);
+            replaceSnakeWithFood(nextSnake);
             Snake newSnake = spawnSnake();
-            gamePlayerMap.put(newSnake, gamePlayer);
+            if (newSnake == null) {
+                modelMain.sendErrorMessage("CANNOT FIND ENOUGH FREE SPACE FOR NEW SNAKE", gamePlayerMap.get(nextSnake));
+                continue;
+            }
+            gamePlayerMap.put(newSnake, lost);
+            lost.nullifySore();
             snakes.add(newSnake);
-            return;
         }
-
-        CollisionResolver.ResolverAnswer ans = collisionResolver.isNextSnakeStateIntersectsFood(head, direction, getFoods());
-        if (ans.isIntersects) {
-            snake.addPoint(direction);
-            removeFood( (Food) ans.whichIntersect);
-            spawnFood();
-            gamePlayer.incrementScore();
+        for (int i = 0; i < foodToRemove.size(); i++) {
+            removeFood(foodToRemove.get(i));
+            if (foods.size() < gameConfig.getFoodStatic() + snakes.size())
+                spawnFood();
         }
-        else snake.moveSnake(direction);
     }
-
     private void removeFood(Food whichRemove) {
         Iterator<Food> iterator = foods.iterator();
         while (iterator.hasNext()) {
@@ -88,25 +125,28 @@ public class GameBoard {
             }
         }
     }
-
     private Snake spawnSnake() {
-        Random random = new Random();
-        boolean spawned = false;
-        Cell randFoodCell_1 = null;
-        Cell randFoodCell_2 = null;
-        while (! spawned) {
-            randFoodCell_1 = new Cell(random.nextInt() % gameConfig.getWidth(), random.nextInt() % gameConfig.getHeight());
-            randFoodCell_2 = new Cell((randFoodCell_1.x + 1) % gameConfig.getWidth(), randFoodCell_1.y);
-            spawned = true;
-            for (int i = 0; i < snakes.size(); i++) {
-                if ((collisionResolver.isFoodIntersectsSnake(new Food(randFoodCell_1), snakes.get(i)))
-                || (collisionResolver.isFoodIntersectsSnake(new Food(randFoodCell_2), snakes.get(i)))) {
-                    i = snakes.size();
-                    spawned = false;
+        for (int i = 0; i < gameConfig.getWidth(); i += 5) {
+            for (int j = 0; j < gameConfig.getHeight(); j += 5) {
+                if (isFreeSquare(i, j, 5)) {
+                    return new Snake(new Cell(i + 1, j + 1), Direction.LEFT, gameConfig.getWidth(), gameConfig.getHeight());
                 }
             }
         }
-        return new Snake(randFoodCell_1, Direction.LEFT, gameConfig.getWidth(), gameConfig.getHeight());
+        return null;
+    }
+    private boolean isFreeSquare(int startX, int startY, int dimension) {
+        Cell cell;
+        for (int i = startX; i < startX + dimension; i++) {
+            for (int j = startY; j < startY + dimension; j++) {
+                cell = new Cell(i, j);
+                for (int s = 0; s < snakes.size(); s++) {
+                    Snake nextSnake = snakes.get(s);
+                    if (collisionResolver.isFoodIntersectsSnake(new Food(cell), nextSnake)) return false;
+                }
+            }
+        }
+        return true;
     }
     private void spawnFood() {
         Random random = new Random();
@@ -128,23 +168,57 @@ public class GameBoard {
     public GamePlayer getGamePlayer(Snake key) {
         return gamePlayerMap.get(key);
     }
-
     public ArrayList<Snake> getSnakes() {
         return new ArrayList<Snake>(snakes);
     }
-
     public ArrayList<Food> getFoods() {
         return new ArrayList<Food>(foods);
     }
-
     public GameConfig getGameConfig() {
         return new GameConfig(gameConfig);
     }
-
     public String getGameName() {
         return new String(gameName);
     }
-    public NodeRole getNodeRole(GamePlayer gamePlayer) {
-        return gamePlayerNodeRoleMap.get(gamePlayer);
+    public void setSnakeDirection(GamePlayer gamePlayer) {
+        Snake snake = getKeyByValue(gamePlayerMap, gamePlayer);
+        assert snake != null;
+        snake.setDirection(gamePlayer.getDirection());
+    }
+    public int addNewPlayer(GamePlayer player, NodeRole role) {
+        ArrayList<GamePlayer> gamePlayers = new ArrayList<>(gamePlayerMap.values());
+        for (GamePlayer p : gamePlayers) {
+            if (p.getPort() == player.getPort() && p.getIpAddress().equals(player.getIpAddress())) return -1;
+        }
+        player.setID(nextID);
+        int ret = nextID;
+        nextID++;
+        player.setNodeRole(role);
+
+        Snake newSnake = spawnSnake();
+        if (newSnake == null) {
+            modelMain.sendErrorMessage("CANNOT FIND ENOUGH FREE SPACE FOR NEW SNAKE", player);
+            return -1;
+        }
+        gamePlayerMap.put(newSnake, player);
+        snakes.add(newSnake);
+        gamePlayerMap.put(newSnake, player);
+        spawnFood();
+        return ret;
+    }
+    public void replaceSnakeWithFood(Snake snake) {
+        Random random = new Random();
+        if (random.nextDouble() < 0.5) {
+            int realX = 0;
+            int realY = 0;
+            for (int i = 0; i < snake.getBody().size(); i++) {
+                realX += snake.getBody().get(i).x;
+                realY += snake.getBody().get(i).y;
+                foods.add(new Food(new Cell(realX, realY)));
+            }
+        }
+    }
+    public ArrayList<GamePlayer> getPlayers() {
+        return new ArrayList<>(gamePlayerMap.values());
     }
 }

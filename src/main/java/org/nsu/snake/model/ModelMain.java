@@ -1,27 +1,37 @@
 package org.nsu.snake.model;
 
+import org.nsu.snake.client.ClientMain;
 import org.nsu.snake.model.components.*;
 import org.nsu.snake.proto.compiled_proto.SnakesProto;
 
+import java.io.IOException;
 import java.util.ArrayList;
 
 public class ModelMain {
     private GameBoard gameBoard;
     private GameConfig gameConfig;
     private int stateOrder = 0;
+    private ClientMain clientMain;
 
-    public ModelMain(GameConfig gameConfig, GamePlayer gamePlayer, NodeRole role, String gameName) {
+    public ModelMain(GameConfig gameConfig, GamePlayer gamePlayer, NodeRole role, String gameName, ClientMain clientMain) {
         this.gameConfig = gameConfig;
-        gameBoard = new GameBoard(gameConfig, gamePlayer, role, gameName);
+        this.clientMain = clientMain;
+        gameBoard = new GameBoard(gameConfig, gamePlayer, role, gameName, this);
     }
 
+    public ModelMain(GameConfig gameConfig, String gameName, ClientMain clientMain, SnakesProto.GameMessage gameMessage) {
+        this.gameConfig = gameConfig;
+        this.clientMain = clientMain;
+
+    }
     public void incrementStateOrder() {
         stateOrder += 1;
     }
-
+    public int getStateOrder() {
+        return this.stateOrder;
+    }
     public SnakesProto.GameMessage getGameState() {
         SnakesProto.GameState.Builder gameStateBuilder = SnakesProto.GameState.newBuilder();
-        stateOrder += 1;
         gameStateBuilder.setStateOrder(stateOrder);
 
         ArrayList<Snake> snakes = gameBoard.getSnakes();
@@ -60,6 +70,8 @@ public class ModelMain {
             GamePlayer nextPlayer = gameBoard.getGamePlayer(snakes.get(i));
             playerBuilder.setId(nextPlayer.getId());
             playerBuilder.setName(nextPlayer.getName());
+            playerBuilder.setPort(nextPlayer.getPort());
+            playerBuilder.setIpAddress(nextPlayer.getIpAddress());
             switch (nextPlayer.getNodeRole()) {
                 case MASTER -> playerBuilder.setRole(SnakesProto.NodeRole.MASTER);
                 case NORMAL -> playerBuilder.setRole(SnakesProto.NodeRole.NORMAL);
@@ -125,10 +137,24 @@ public class ModelMain {
 
         return gameMessageBuilder.build();
     }
-    public NodeRole getNodeRole(GamePlayer gamePlayer) {
-        return gameBoard.getNodeRole(gamePlayer);
+    public void setDirection(GamePlayer gamePlayer, Direction direction) {
+        gamePlayer.setDirection(direction);
+        gameBoard.setSnakeDirection(gamePlayer);
     }
-    public void calculateNextState(Direction direction, GamePlayer gamePlayer) {
-        gameBoard.calculateNextState(direction, gamePlayer);
+    public void calculateNextState() {
+        gameBoard.calculateNextState();
+    }
+    public int addNewPlayer(GamePlayer player, NodeRole role) {
+        return gameBoard.addNewPlayer(player, role);
+    }
+    public void sendErrorMessage(String message, GamePlayer player) {
+        try {
+            this.clientMain.sendErrorMessage(message, player);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+    public ArrayList<GamePlayer> getAllPlayers() {
+        return gameBoard.getPlayers();
     }
 }
