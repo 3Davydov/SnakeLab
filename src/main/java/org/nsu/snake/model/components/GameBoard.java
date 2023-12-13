@@ -17,11 +17,13 @@ public class GameBoard {
     private CollisionResolver collisionResolver;
     private String gameName;
     private ModelMain modelMain;
+    private ArrayList<GamePlayer> viewPlayers; // We need this because of VIEWERS
 
     public GameBoard(GameConfig gameConfig, GamePlayer gamePlayer, NodeRole role, String gameName, ModelMain modelMain) {
         this.gameConfig = gameConfig;
         this.modelMain = modelMain;
         this.gameName = gameName;
+        this.viewPlayers = new ArrayList<>();
         snakes = new ArrayList<>();
         foods = new ArrayList<>();
         collisionResolver = new CollisionResolver();
@@ -37,6 +39,8 @@ public class GameBoard {
         gamePlayer.setDirection(Direction.LEFT);
         gamePlayerMap = new HashMap<>();
         gamePlayerMap.put(firstSnake, gamePlayer);
+        if (role.equals(NodeRole.VIEWER))
+            viewPlayers.add(gamePlayer);
 
         for (int i = 0; i < gameConfig.getFoodStatic() + 1; i++) {
             Cell randFoodCell = new Cell((random.nextInt() % gameConfig.getWidth() + gameConfig.getWidth()) % gameConfig.getWidth(),
@@ -50,6 +54,7 @@ public class GameBoard {
         this.gameConfig = gameConfig;
         this.modelMain = modelMain;
         this.gameName = gameName;
+        this.viewPlayers = new ArrayList<>();
         this.collisionResolver = new CollisionResolver();
 
         snakes = new ArrayList<>();
@@ -71,7 +76,7 @@ public class GameBoard {
             int playerID = srcSnakes.get(i).getPlayerId();
             SnakesProto.GamePlayer srcPlayer = getPlayerByID(playerID, srcPlayers);
             if (srcPlayer == null) {
-                System.out.println("PLAYER WITH ID " + playerID + " DOES NOT EXIST");
+                // It means that player is in VIEW mode
                 continue;
             }
             if (nextID <= playerID) nextID = (playerID + 1);
@@ -92,6 +97,21 @@ public class GameBoard {
             snakes.add(newSnake);
             gamePlayerMap.put(newSnake,
                     new GamePlayer(srcPlayer.getName(), srcPlayer.getId(), srcPlayer.getIpAddress(), srcPlayer.getPort(), newPlayerRole, srcPlayer.getScore()));
+        }
+
+        for (int i = 0; i < srcPlayers.size(); i++) {
+            SnakesProto.GamePlayer srcPlayer = srcPlayers.get(i);
+            NodeRole newPlayerRole = NodeRole.NORMAL;
+            switch (srcPlayer.getRole()) {
+                case MASTER -> newPlayerRole = NodeRole.MASTER;
+                case NORMAL -> newPlayerRole = NodeRole.NORMAL;
+                case VIEWER -> newPlayerRole = NodeRole.VIEWER;
+                case DEPUTY -> newPlayerRole = NodeRole.DEPUTY;
+            }
+            if (newPlayerRole.equals(NodeRole.VIEWER))
+                viewPlayers.add(
+                        new GamePlayer(srcPlayer.getName(), srcPlayer.getId(), srcPlayer.getIpAddress(), srcPlayer.getPort(), newPlayerRole, srcPlayer.getScore())
+                );
         }
 
         foods = new ArrayList<>();
@@ -276,6 +296,12 @@ public class GameBoard {
         snake.setDirection(gamePlayer.getDirection());
     }
     public int addNewPlayer(GamePlayer player, NodeRole role) {
+        if (role.equals(NodeRole.VIEWER)) {
+            viewPlayers.add(player);
+            int ret = nextID;
+            nextID++;
+            return ret;
+        }
         ArrayList<GamePlayer> gamePlayers = new ArrayList<>(gamePlayerMap.values());
         for (GamePlayer p : gamePlayers) {
             if (p.getPort() == player.getPort() && p.getIpAddress().equals(player.getIpAddress())) return -1;
@@ -310,8 +336,14 @@ public class GameBoard {
     public ArrayList<GamePlayer> getPlayers() {
         return new ArrayList<>(gamePlayerMap.values());
     }
-
+    public ArrayList<GamePlayer> getViewers() {
+        return new ArrayList<>(viewPlayers);
+    }
     public void removePlayer(GamePlayer player) {
+        if (player.getNodeRole().equals(NodeRole.VIEWER)) {
+            viewPlayers.remove(player);
+            return;
+        }
         Snake s = getKeyByValue(gamePlayerMap, player);
         if (s == null) {
             System.out.println("YOU TRY TO REMOVE NOT EXISTING PLAYER");
@@ -324,5 +356,20 @@ public class GameBoard {
                 return;
             }
         }
+    }
+    public void removeViewer(GamePlayer viewer) {
+        viewPlayers.remove(viewer);
+    }
+
+    public boolean gamePlayerNameIsUnique(String name) {
+        ArrayList<GamePlayer> players = new ArrayList<>(gamePlayerMap.values());
+        ArrayList<GamePlayer> viewers = new ArrayList<>(viewPlayers);
+        for (GamePlayer g : players) {
+            if (g.getName().equals(name)) return false;
+        }
+        for (GamePlayer g : viewers) {
+            if (g.getName().equals(name)) return false;
+        }
+        return true;
     }
 }

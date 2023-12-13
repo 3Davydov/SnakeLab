@@ -5,10 +5,7 @@ import org.nsu.snake.client.net.ClientSocket;
 import org.nsu.snake.client.view.ClientGUI;
 import org.nsu.snake.model.GameConfig;
 import org.nsu.snake.model.ModelMain;
-import org.nsu.snake.model.components.Direction;
-import org.nsu.snake.model.components.GameInfo;
-import org.nsu.snake.model.components.GamePlayer;
-import org.nsu.snake.model.components.NodeRole;
+import org.nsu.snake.model.components.*;
 import org.nsu.snake.proto.compiled_proto.SnakesProto;
 
 import java.io.IOException;
@@ -40,6 +37,13 @@ public class ClientMain {
         }
         clientGUI = new ClientGUI(this);
         roleManager = new RoleManager(this);
+    }
+    public boolean gameNameIsUnique(String name) {
+        ArrayList<NearbyGame> nearbyGamesNames = new ArrayList<>(gamesAroundMap.values());
+        for (NearbyGame g : nearbyGamesNames) {
+            if (g.gameName.equals(name)) return false;
+        }
+        return true;
     }
     public void startNewGame(GameConfig gameConfig, GamePlayer gamePlayer, String gameName) {
         delay = gameConfig.getStateDelayMs();
@@ -126,7 +130,16 @@ public class ClientMain {
                                 pingManager.rebootTrackedNode_send(new TrackedNode(player.getPort(), player.getIpAddress()));
                             }
                             else
-                                clientGUI.repaintField(messageToSend.getState().getState());
+                                clientGUI.repaintField(messageToSend.getState().getState(), getPlayersStatistic());
+                        }
+
+                        ArrayList<GamePlayer> viewersList = modelMain.getAllViewers();
+                        for (GamePlayer player : viewersList) {
+                            clientSocket.sendUnicastMessage(player.getIpAddress(), player.getPort(), messageToSend);
+                            messageManager.addMessageToConfirmList(
+                                    new UnconfirmedMessageInfo(player.getPort(), player.getIpAddress(), messageToSend.getMsgSeq()),
+                                    messageToSend);
+                            pingManager.rebootTrackedNode_send(new TrackedNode(player.getPort(), player.getIpAddress()));
                         }
                         modelMain.incrementStateOrder();
                     }
@@ -135,6 +148,31 @@ public class ClientMain {
                 }
             }
         }, 0, delay);
+    }
+    private ArrayList<PlayerStatistic> getPlayersStatistic() {
+        ArrayList<PlayerStatistic> stats = new ArrayList<>();
+        ArrayList<GamePlayer> playersList = modelMain.getAllPlayers();
+        for (int i = 0; i < playersList.size(); i++) {
+            PlayerStatistic ps = new PlayerStatistic(playersList.get(i).getName(), playersList.get(i).getScore(), playersList.get(i).getNodeRole());
+            stats.add(ps);
+        }
+        return stats;
+    }
+    private ArrayList<PlayerStatistic> getPlayersStatistic(ArrayList<SnakesProto.GamePlayer> players) {
+        ArrayList<PlayerStatistic> stats = new ArrayList<>();
+        for (int i = 0; i < players.size(); i++) {
+            NodeRole role = NodeRole.NORMAL;
+            switch (players.get(i).getRole()) {
+                case MASTER -> role = NodeRole.MASTER;
+                case DEPUTY -> role = NodeRole.DEPUTY;
+                case NORMAL -> role = NodeRole.NORMAL;
+                case VIEWER -> role = NodeRole.VIEWER;
+            }
+
+            PlayerStatistic playerStatistic = new PlayerStatistic(players.get(i).getName(), players.get(i).getScore(), role);
+            stats.add(playerStatistic);
+        }
+        return stats;
     }
     private void startAnnouncement() {
         Timer timer = new Timer();
@@ -164,7 +202,8 @@ public class ClientMain {
             }
             pingManager.rebootTrackedNode_receive(new TrackedNode(answer.senderPort, answer.senderIP));
             if (knownStateOrder < answer.gameMessage.getMsgSeq()) {
-                clientGUI.repaintField(answer.gameMessage.getState().getState());
+                ArrayList<SnakesProto.GamePlayer> srcPlayers = new ArrayList<>(answer.gameMessage.getState().getState().getPlayers().getPlayersList());
+                clientGUI.repaintField(answer.gameMessage.getState().getState(), getPlayersStatistic(srcPlayers));
                 knownStateOrder = answer.gameMessage.getMsgSeq();
                 roleManager.refreshPlayerRoles(answer.gameMessage.getState().getState().getPlayers());
                 this.gamePlayer.setNodeRole(roleManager.getPlayerRole(this.gamePlayer));
@@ -197,7 +236,12 @@ public class ClientMain {
 //            if (knownStateOrder >= answer.gameMessage.getMsgSeq()) return;
             if (clientGUI.boardView == null) { // TODO делать null в конце игры
                 SnakesProto.GameConfig gameConfig = gamesAroundMap.get(answer.senderIP).gameAnnouncement.getGames(0).getConfig();
-                clientGUI.paintFieldAtFirst(new GameConfig(gameConfig.getWidth(), gameConfig.getHeight(), gameConfig.getFoodStatic(), gameConfig.getStateDelayMs()));
+                PlayerStatistic selfPlayerStatistic = new PlayerStatistic(this.gamePlayer.getName(), 0, this.gamePlayer.getNodeRole());
+                PlayerStatistic hostPlayerStatistic = new PlayerStatistic(" ", 0, NodeRole.MASTER);
+                ArrayList<PlayerStatistic> data = new ArrayList<>();
+                data.add(selfPlayerStatistic);
+                data.add(hostPlayerStatistic);
+                clientGUI.paintFieldAtFirst(new GameConfig(gameConfig.getWidth(), gameConfig.getHeight(), gameConfig.getFoodStatic(), gameConfig.getStateDelayMs()), data);
 //                this.gamePlayer.setID(answer.gameMessage.getReceiverId());
                 this.delay = gamesAroundMap.get(this.gamePlayer.getHostIP()).gameConfig.getStateDelayMs();
                 isGamePlayer = true;
@@ -233,6 +277,10 @@ public class ClientMain {
         else if (answer.gameMessage.getTypeCase().equals(SnakesProto.GameMessage.TypeCase.JOIN)) {
             System.out.println("JOIN REQUEST");
             SnakesProto.GameMessage.JoinMsg joinMsg = answer.gameMessage.getJoin();
+            if (!modelMain.gamePlayerNameIsUnique(joinMsg.getPlayerName())) {
+                sendJoinRefuse("Player with this name already exists", answer.senderIP, answer.senderPort);
+                return;
+            }
             GamePlayer gamePlayer = new GamePlayer(joinMsg.getPlayerName());
             gamePlayer.setIP(answer.senderIP);
             gamePlayer.setPort(answer.senderPort);
@@ -246,6 +294,7 @@ public class ClientMain {
             }
             if (role.equals(NodeRole.MASTER)) {
                 System.out.println("SOMEBODY TRUING TO CONNECT GAME WITH ROLE MASTER");
+                sendJoinRefuse("You cannot join to existing game as MASTER", answer.senderIP, answer.senderPort);
                 return;
             }
             else if (role.equals(NodeRole.NORMAL) && modelMain.getAllPlayers().size() == 1) {
@@ -295,7 +344,7 @@ public class ClientMain {
                 throw new RuntimeException(e);
             }
             if (lastStateMessage == null) { // Значит, что не смогли подключиться
-                // TODO показывать окно с ошибкой
+                clientGUI.displayError(answer.gameMessage.getError().getErrorMessage());
             }
         }
         else if (answer.gameMessage.getTypeCase().equals(SnakesProto.GameMessage.TypeCase.ROLE_CHANGE)) {
@@ -345,6 +394,21 @@ public class ClientMain {
                 throw new RuntimeException(e);
             }
         }
+    }
+    private void sendJoinRefuse(String reason, String receiverIP, int receiverPort) {
+        SnakesProto.GameMessage.Builder gameMessageBuilder = SnakesProto.GameMessage.newBuilder();
+        gameMessageBuilder.setMsgSeq(selfStateOrder);
+
+        SnakesProto.GameMessage.ErrorMsg.Builder errorMessageBuilder = SnakesProto.GameMessage.ErrorMsg.newBuilder();
+        errorMessageBuilder.setErrorMessage(reason);
+
+        gameMessageBuilder.setError(errorMessageBuilder);
+        try {
+            clientSocket.sendUnicastMessage(receiverIP, receiverPort, gameMessageBuilder.build());
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        return;
     }
     private void sendAckMessage(int receiverID, int receiverPort, String receiverIP, long seq) throws IOException {
         SnakesProto.GameMessage.Builder gameMessageBuilder = SnakesProto.GameMessage.newBuilder();
@@ -508,6 +572,11 @@ public class ClientMain {
             modelMain.removePlayer(removingPlayer);
             gamePlayerMap.remove(node);
         }
+        else if (this.gamePlayer.getNodeRole().equals(NodeRole.MASTER) && deadNodeRole.equals(NodeRole.VIEWER)) {
+            GamePlayer removingPlayer = gamePlayerMap.get(node).player;
+            modelMain.removeViewer(removingPlayer);
+            gamePlayerMap.remove(node);
+        }
     }
     private void sendRoleChangeMessage(NodeRole senderRole, NodeRole receiverRole, int receiverPort, String receiverIP, int receiverId, int senderID) throws IOException {
         SnakesProto.GameMessage.Builder gameMessageBuilder = SnakesProto.GameMessage.newBuilder();
@@ -562,8 +631,11 @@ public class ClientMain {
             seqNumber = -1;
         }
     }
+
+    public void quitGame() {
+
+    }
     public static void main(String[] args) {
         ClientMain clientMain = new ClientMain();
     }
 }
-// TODO game name должно быть глобально уникальным

@@ -87,6 +87,19 @@ public class ModelMain {
             playersBuilder.addPlayers(playerBuilder);
         }
 
+        ArrayList<GamePlayer> viewers = gameBoard.getViewers();
+        for (int i = 0; i < viewers.size(); i++) {
+            GamePlayer nextPlayer = viewers.get(i);
+            SnakesProto.GamePlayer.Builder playerBuilder = SnakesProto.GamePlayer.newBuilder();
+            playerBuilder.setId(nextPlayer.getId());
+            playerBuilder.setName(nextPlayer.getName());
+            playerBuilder.setPort(nextPlayer.getPort());
+            playerBuilder.setIpAddress(nextPlayer.getIpAddress());
+            playerBuilder.setRole(SnakesProto.NodeRole.VIEWER);
+            playerBuilder.setScore(nextPlayer.getScore());
+            playersBuilder.addPlayers(playerBuilder);
+        }
+
         gameStateBuilder.setPlayers(playersBuilder);
         SnakesProto.GameMessage.StateMsg.Builder stateBuilder = SnakesProto.GameMessage.StateMsg.newBuilder();
         stateBuilder.setState(gameStateBuilder);
@@ -162,8 +175,17 @@ public class ModelMain {
     public ArrayList<GamePlayer> getAllPlayers() {
         return gameBoard.getPlayers();
     }
-
+    public ArrayList<GamePlayer> getAllViewers() {
+        return gameBoard.getViewers();
+    }
     public void removePlayer(GamePlayer player) {
         gameBoard.removePlayer(player);
+    }
+
+    public void removeViewer(GamePlayer viewer) {
+        gameBoard.removeViewer(viewer);
+    }
+    public boolean gamePlayerNameIsUnique(String name) {
+        return gameBoard.gamePlayerNameIsUnique(name);
     }
 }

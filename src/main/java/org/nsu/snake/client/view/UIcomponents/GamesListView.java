@@ -4,6 +4,7 @@ import org.nsu.snake.client.view.ClientGUI;
 import org.nsu.snake.model.GameConfig;
 import org.nsu.snake.model.components.GameInfo;
 import org.nsu.snake.model.components.GamePlayer;
+import org.nsu.snake.model.components.NodeRole;
 
 import java.awt.*;
 import java.awt.event.ActionEvent;
@@ -124,6 +125,11 @@ public class GamesListView {
                     if (joinDialog.isSucceeded()) {
                         clientGUI.clientMain.joinGame(requestGame, playerName, playerType);
                     }
+                    else {
+                        String err = joinDialog.getErrorMessage();
+                        if (err == null) err = "Try again";
+                        JOptionPane.showMessageDialog(mainFrame, err);
+                    }
                 }
             });
         }
@@ -136,6 +142,7 @@ public class GamesListView {
     private class JoinDialog extends JDialog {
         private final JTextField playerNameField;
         private final JTextField playerTypeFiled;
+        private String errorMessage = null;
         private boolean succeeded;
 
         public JoinDialog(JFrame parent) {
@@ -191,8 +198,24 @@ public class GamesListView {
 
                 public void actionPerformed(ActionEvent e) {
 
-                    if (getPlayerType() == null || getPlayerName() == null) {
+                    if (getPlayerName().isEmpty()) {
                         succeeded = false;
+                        errorMessage = "Player name is empty";
+                        dispose();
+                        return;
+                    }
+
+                    NodeRole role = null;
+                    switch (playerTypeFiled.getText()) {
+                        case "NORMAL" -> role = NodeRole.NORMAL;
+                        case "MASTER" -> role = NodeRole.MASTER;
+                        case "DEPUTY" -> role = NodeRole.DEPUTY;
+                        case "VIEWER" -> role = NodeRole.VIEWER;
+                    }
+                    if (role == null) {
+                        succeeded = false;
+                        errorMessage = "Invalid player type";
+                        dispose();
                         return;
                     }
 
@@ -221,5 +244,6 @@ public class GamesListView {
         public boolean isSucceeded() {
             return succeeded;
         }
+        public String getErrorMessage() {return this.errorMessage;}
     }
 }

@@ -2,6 +2,7 @@ package org.nsu.snake.client.view;
 
 import org.nsu.snake.client.ClientMain;
 import org.nsu.snake.client.view.UIcomponents.BoardView;
+import org.nsu.snake.client.view.UIcomponents.GameStatistics;
 import org.nsu.snake.client.view.UIcomponents.GamesListView;
 import org.nsu.snake.client.view.UIcomponents.MainMenu;
 import org.nsu.snake.model.GameConfig;
@@ -9,6 +10,7 @@ import org.nsu.snake.model.ModelMain;
 import org.nsu.snake.model.components.Direction;
 import org.nsu.snake.model.components.GameInfo;
 import org.nsu.snake.model.components.NodeRole;
+import org.nsu.snake.model.components.PlayerStatistic;
 import org.nsu.snake.proto.compiled_proto.SnakesProto;
 
 import javax.swing.*;
@@ -26,6 +28,8 @@ public class ClientGUI {
     private JPanel choiseWindow;
     private MainMenu mainMenu;
     private GamesListView gamesListView;
+
+    private GameStatistics gameStatistics;
     public BoardView boardView = null;
     public ClientMain clientMain;
     public KeyListener actionWindowListener;
@@ -64,6 +68,8 @@ public class ClientGUI {
 
         actionWindow.setBackground(Color.GRAY);
         actionWindow.setLayout(new BorderLayout());
+
+        gameStatistics = new GameStatistics(this, mainFrame);
 
         choiseWindow.setBackground(Color.YELLOW);
         choiseWindow.setLayout(new BorderLayout());
@@ -111,12 +117,18 @@ public class ClientGUI {
             }
         };
     }
-
-    public void repaintField(SnakesProto.GameState gameState) {
+    public void repaintField(SnakesProto.GameState gameState, ArrayList<PlayerStatistic> data) {
         boardView.repaintField(gameState);
+        gameStatistics.printTable(data);
+
+        gameStatistics.getTable().revalidate();
+        gameStatistics.getTable().repaint();
+
+        choiseWindow.revalidate();
+        choiseWindow.repaint();
+
         actionWindow.repaint();
     }
-
     public void showGamesList(ArrayList<GameInfo> data) {
         actionWindow.removeAll();
         gamesListView.getTable().setSize(actionWindow.getWidth(), actionWindow.getHeight());
@@ -128,12 +140,10 @@ public class ClientGUI {
         mainWindow.revalidate();
         mainWindow.repaint();
     }
-
     public Direction getCurrentDirection() {
         staticDirection = currentDirection;
         return this.staticDirection;
     }
-
     public void returnToPrevView() {
         actionWindow.removeAll();
         actionWindow.setBackground(Color.GRAY);
@@ -142,17 +152,22 @@ public class ClientGUI {
 
         mainWindow.revalidate();
         mainWindow.repaint();
-
     }
-
-    public void paintFieldAtFirst(GameConfig gameConfig) {
+    public void paintFieldAtFirst(GameConfig gameConfig, ArrayList<PlayerStatistic> data) {
         returnToPrevView();
         int gridSize = 25;
         boardView = new BoardView(gameConfig.getWidth(), gameConfig.getHeight(), gridSize,
                 actionWindow.getWidth() / 2 - (gridSize * gameConfig.getWidth() / 2), gridSize);
-        actionWindow.add(boardView.getField());
+        actionWindow.add(boardView.getField(), BorderLayout.CENTER);
         boardView.getField().repaint();
         boardView.getField().revalidate();
+
+        gameStatistics.printTable(data);
+        gameStatistics.getTable().setVisible(true);
+        choiseWindow.remove(mainMenu.getMenu());
+        choiseWindow.add(gameStatistics.getTable(), BorderLayout.CENTER);
+//        gameStatistics.getTable().revalidate();
+//        gameStatistics.getTable().repaint();
 
         // TODO returns false for some reason
         actionWindow.requestFocusInWindow();
@@ -160,6 +175,14 @@ public class ClientGUI {
         actionWindow.addKeyListener(actionWindowListener);
 
         actionWindow.revalidate();
+        choiseWindow.revalidate();
         mainFrame.revalidate();
+    }
+    public void displayError(String err) {
+        JOptionPane.showMessageDialog(mainFrame, err);
+    }
+
+    public void quitGame() {
+
     }
 }

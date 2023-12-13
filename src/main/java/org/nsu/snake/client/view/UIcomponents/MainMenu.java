@@ -3,6 +3,8 @@ package org.nsu.snake.client.view.UIcomponents;
 import org.nsu.snake.client.view.ClientGUI;
 import org.nsu.snake.model.GameConfig;
 import org.nsu.snake.model.components.GamePlayer;
+import org.nsu.snake.model.components.NodeRole;
+import org.nsu.snake.model.components.PlayerStatistic;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
@@ -13,6 +15,7 @@ import java.awt.GridBagLayout;
 import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.util.ArrayList;
 
 import javax.swing.Box;
 import javax.swing.JButton;
@@ -100,13 +103,23 @@ public class MainMenu implements ActionListener{
             LoginDialog loginDialog = new LoginDialog(mainFrame);
             loginDialog.setVisible(true);
             if (loginDialog.isSucceeded()) {
-                clientGUI.paintFieldAtFirst(gameConfig);
+                ArrayList<PlayerStatistic> data = new ArrayList<>();
+                data.add(new PlayerStatistic(gamePlayer.getName(), 0, NodeRole.MASTER));
+                clientGUI.paintFieldAtFirst(gameConfig, data);
                 clientGUI.clientMain.startNewGame(gameConfig, gamePlayer, gameName);
+            }
+            else {
+                String err = loginDialog.getErrorMessage();
+                if (err == null) err = "Try again";
+                JOptionPane.showMessageDialog(mainFrame, err);
             }
         }
         if (e.getSource() == gameListButton.getButton()) {
             if (clientGUI.boardView == null) { // TODO придется занулять это поле после выхода из игры
                 clientGUI.showGamesList(clientGUI.clientMain.getGamesAround());
+            }
+            else {
+                clientGUI.actionWindow.requestFocusInWindow();
             }
         }
         if (e.getSource() == exitButton.getButton()) {
@@ -122,6 +135,7 @@ public class MainMenu implements ActionListener{
         private final JTextField gameDelayField;
         private final JTextField playerNameField;
         private final JTextField gameNameField;
+        private String errorMessage = null;
         private boolean succeeded;
 
         public LoginDialog(JFrame parent) {
@@ -233,6 +247,20 @@ public class MainMenu implements ActionListener{
                         getGameFoodStatic() < 0 || getGameFoodStatic() > 100 ||
                         getGameDelay() < 100 || getGameDelay() > 3000) {
                         succeeded = false;
+                        errorMessage = "Invalid config parameters";
+                        dispose();
+                        return;
+                    }
+                    if (! clientGUI.clientMain.gameNameIsUnique(getGameName())) {
+                        errorMessage = "Game with this name already exists";
+                        succeeded = false;
+                        dispose();
+                        return;
+                    }
+                    if (getPlayerName().isEmpty() || getGameName().isEmpty()) {
+                        errorMessage = "Empty game/player name";
+                        succeeded = false;
+                        dispose();
                         return;
                     }
                     gameConfig = new GameConfig(getGameWidth(), getGameHeight(), getGameFoodStatic(), getGameDelay());
@@ -270,10 +298,12 @@ public class MainMenu implements ActionListener{
         private int getGameDelay() {
             return Integer.parseInt(gameDelayField.getText());
         }
-
+        private String getGameName() {return this.gameNameField.getText();}
         private String getPlayerName() {return playerNameField.getText();}
         public boolean isSucceeded() {
             return succeeded;
         }
+
+        public String getErrorMessage() {return this.errorMessage;}
     }
 }
