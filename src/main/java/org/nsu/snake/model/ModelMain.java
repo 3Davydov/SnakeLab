@@ -22,7 +22,10 @@ public class ModelMain {
     public ModelMain(GameConfig gameConfig, String gameName, ClientMain clientMain, SnakesProto.GameMessage gameMessage) {
         this.gameConfig = gameConfig;
         this.clientMain = clientMain;
+        this.stateOrder = gameMessage.getState().getState().getStateOrder();
 
+        // Когда встречаем узел с ролью MASTER - удаляем его. Когда встречаем узел с ролью DEPUTY - делаем его MASTER
+        gameBoard = new GameBoard(gameConfig, gameName, this, gameMessage);
     }
     public void incrementStateOrder() {
         stateOrder += 1;
@@ -68,6 +71,7 @@ public class ModelMain {
         for (int i = 0; i < snakes.size(); i++) {
             SnakesProto.GamePlayer.Builder playerBuilder = SnakesProto.GamePlayer.newBuilder();
             GamePlayer nextPlayer = gameBoard.getGamePlayer(snakes.get(i));
+            if (nextPlayer == null) continue;
             playerBuilder.setId(nextPlayer.getId());
             playerBuilder.setName(nextPlayer.getName());
             playerBuilder.setPort(nextPlayer.getPort());
@@ -102,6 +106,7 @@ public class ModelMain {
         for (int i = 0; i < snakes.size(); i++) {
             SnakesProto.GamePlayer.Builder playerBuilder = SnakesProto.GamePlayer.newBuilder();
             GamePlayer nextPlayer = gameBoard.getGamePlayer(snakes.get(i));
+            if (nextPlayer == null) continue;
             playerBuilder.setId(nextPlayer.getId());
             playerBuilder.setName(nextPlayer.getName());
             switch (nextPlayer.getNodeRole()) {
@@ -156,5 +161,9 @@ public class ModelMain {
     }
     public ArrayList<GamePlayer> getAllPlayers() {
         return gameBoard.getPlayers();
+    }
+
+    public void removePlayer(GamePlayer player) {
+        gameBoard.removePlayer(player);
     }
 }

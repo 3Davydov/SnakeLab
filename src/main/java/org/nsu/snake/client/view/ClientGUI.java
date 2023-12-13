@@ -101,7 +101,7 @@ public class ClientGUI {
                     if (staticDirection != Direction.DOWN)
                         currentDirection = Direction.UP;
                 }
-                if (clientMain.getNodeRole().equals(NodeRole.NORMAL)) {
+                if (clientMain.getNodeRole().equals(NodeRole.NORMAL) || clientMain.getNodeRole().equals(NodeRole.DEPUTY)) {
                     try {
                         clientMain.sendSteerMessage();
                     } catch (IOException ex) {

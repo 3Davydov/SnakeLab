@@ -57,15 +57,22 @@ public class RoleManager {
         nodeRoleMap.put(trackedNode, role);
     }
 
+    public void addPlayer(TrackedNode player, NodeRole role) {
+        nodeRoleMap.remove(player);
+        nodeRoleMap.put(player, role);
+    }
     public void removePlayer(GamePlayer player) {
         TrackedNode trackedNode = new TrackedNode(player.getPort(), player.getIpAddress());
         nodeRoleMap.remove(trackedNode);
     }
 
-    public TrackedNode getNodeWithRole(NodeRole role) {
-        return getKeyByValue(nodeRoleMap, role);
+    public void removePlayer(TrackedNode node) {
+        nodeRoleMap.remove(node);
     }
 
+    public TrackedNode getPlayerWithRole(NodeRole role) {
+        return getKeyByValue(nodeRoleMap, role);
+    }
     private  <K, V> K getKeyByValue(Map<K, V> map, V value) {
         for (Map.Entry<K, V> entry : map.entrySet()) {
             if (Objects.equals(value, entry.getValue())) {

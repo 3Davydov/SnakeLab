@@ -32,6 +32,11 @@ public class MessageManager extends Thread {
 //        System.out.println("REMOVED BY CLIENT ");
     }
 
+    synchronized public void clearMessageToConfirmList() {
+        unconfirmedMessagesMap.clear();
+        messageInfoLongMap.clear();
+    }
+
     @Override
     public void run() {
         while (! this.isInterrupted()) {
@@ -69,7 +74,6 @@ public class MessageManager extends Thread {
             }
         }
     }
-
     private  <K, V> K getKeyByValue(Map<K, V> map, V value) {
         for (Map.Entry<K, V> entry : map.entrySet()) {
             if (Objects.equals(value, entry.getValue())) {

@@ -1,23 +1,45 @@
 package org.nsu.snake.model.components;
 
+import org.nsu.snake.client.management.TrackedNode;
+
 import java.util.ArrayList;
 import java.util.LinkedList;
+import java.util.Objects;
 
 public class Snake {
     private ArrayList<Cell> body;
     private Direction direction;
-
     private final int fieldWidth;
     private final int fieldHeight;
+    private SnakeState snakeState;
 
-    public Snake(Cell head, Direction direction, int newWidth, int newHeight) {
+    public Snake(Cell head, Direction direction, int newWidth, int newHeight, SnakeState state) {
         body = new ArrayList<>();
         body.add(head);
         body.add(new Cell(1, 0));
         this.direction = direction;
         this.fieldWidth = newWidth;
         this.fieldHeight = newHeight;
+        this.snakeState = state;
     }
+
+    public Snake(ArrayList<Cell> body, Direction direction, int newWidth, int newHeight, SnakeState state) {
+        this.body = new ArrayList<>(body);
+        this.direction = direction;
+        this.fieldWidth = newWidth;
+        this.fieldHeight = newHeight;
+        this.snakeState = state;
+    }
+
+    public Snake() {
+        this.snakeState = SnakeState.VIEWER;
+        fieldHeight = 0;
+        fieldWidth = 0;
+    }
+
+    public SnakeState getSnakeState() {return this.snakeState;}
+
+    public void setSnakeState(SnakeState state) {this.snakeState = state;}
     public ArrayList<Cell> getBody() {
         @SuppressWarnings("uncheked")
         ArrayList<Cell> ret = (ArrayList<Cell>) this.body.clone();
@@ -144,7 +166,6 @@ public class Snake {
         }
         System.out.println();
     }
-
     public void setDirection(Direction newDirection) {
         this.direction = newDirection;
     }

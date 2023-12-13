@@ -70,6 +70,7 @@ public class ClientSocket extends Thread {
         socketChannel.send(byteBuffer, new InetSocketAddress(ipAddress, port));
     }
     public synchronized void sendUnicastMessage(String ip, int port, SnakesProto.GameMessage message) throws IOException {
+        if (message == null) return;
         byte[] messageBytes = message.toByteArray();
         ByteBuffer byteBuffer = ByteBuffer.wrap(messageBytes);
         socketChannel.send(byteBuffer, new InetSocketAddress(ip, port));
@@ -108,5 +109,9 @@ public class ClientSocket extends Thread {
         public SnakesProto.GameMessage gameMessage;
         public String senderIP;
         public int senderPort;
+    }
+
+    public static void main(String[] args) throws IOException {
+        ClientSocket clientSocket = new ClientSocket(new ClientMain());
     }
 }
