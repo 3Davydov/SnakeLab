@@ -67,7 +67,6 @@ public class PingManager extends Thread {
                 }
                 sleep(delay);
             } catch (InterruptedException | IOException e) {
-                e.printStackTrace();
                 this.interrupt();
                 return;
             }

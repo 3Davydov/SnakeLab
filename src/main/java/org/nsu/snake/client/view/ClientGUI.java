@@ -23,17 +23,14 @@ import java.util.ArrayList;
 public class ClientGUI {
     public JFrame mainFrame;
     private JPanel mainWindow;
-
     public JPanel actionWindow;
     private JPanel choiseWindow;
     private MainMenu mainMenu;
     private GamesListView gamesListView;
-
-    private GameStatistics gameStatistics;
+    private GameStatistics gameStatistics = null;
     public BoardView boardView = null;
     public ClientMain clientMain;
     public KeyListener actionWindowListener;
-
     private Direction currentDirection = Direction.LEFT;
     private Direction staticDirection = Direction.LEFT;
 
@@ -68,8 +65,6 @@ public class ClientGUI {
 
         actionWindow.setBackground(Color.GRAY);
         actionWindow.setLayout(new BorderLayout());
-
-        gameStatistics = new GameStatistics(this, mainFrame);
 
         choiseWindow.setBackground(Color.YELLOW);
         choiseWindow.setLayout(new BorderLayout());
@@ -150,6 +145,11 @@ public class ClientGUI {
         actionWindow.revalidate();
         actionWindow.repaint();
 
+        choiseWindow.removeAll();
+        choiseWindow.add(mainMenu.getMenu(), BorderLayout.CENTER);
+        choiseWindow.revalidate();
+        choiseWindow.repaint();
+
         mainWindow.revalidate();
         mainWindow.repaint();
     }
@@ -162,12 +162,11 @@ public class ClientGUI {
         boardView.getField().repaint();
         boardView.getField().revalidate();
 
+        gameStatistics = new GameStatistics(this, mainFrame);
         gameStatistics.printTable(data);
         gameStatistics.getTable().setVisible(true);
         choiseWindow.remove(mainMenu.getMenu());
         choiseWindow.add(gameStatistics.getTable(), BorderLayout.CENTER);
-//        gameStatistics.getTable().revalidate();
-//        gameStatistics.getTable().repaint();
 
         // TODO returns false for some reason
         actionWindow.requestFocusInWindow();
@@ -181,8 +180,9 @@ public class ClientGUI {
     public void displayError(String err) {
         JOptionPane.showMessageDialog(mainFrame, err);
     }
-
     public void quitGame() {
-
+        returnToPrevView();
+        boardView = null;
+        gameStatistics = null;
     }
 }

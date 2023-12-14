@@ -9,24 +9,28 @@ import org.nsu.snake.model.components.*;
 import org.nsu.snake.proto.compiled_proto.SnakesProto;
 
 import java.io.IOException;
+import java.sql.Time;
 import java.util.*;
 
 public class ClientMain {
     private final ClientGUI clientGUI;
-    private ModelMain modelMain = null; // TODO обнулять, когда перестаем быть хостом
+    private ModelMain modelMain = null;
     public final ClientSocket clientSocket;
-    private GamePlayer gamePlayer;
-    private int delay;
-    private final Map<String,  NearbyGame> gamesAroundMap; // TODO удалять ip хоста из списка после конца игры
-    private final Map<TrackedNode, ChronologyPlayer> gamePlayerMap; // TODO удалять игрока, когда он выходит
-    private boolean isGamePlayer = false; // TODO не забываем менять состояние
-    private long knownStateOrder = -1; // TODO занулять после окончания игры
-    private long selfStateOrder = 0; // TODO занулять после окончания игры
-    private int masterId = -1; // TODO занулять после окончания игры
-    private MessageManager messageManager = null; // TODO останавливать и удалять после конца игры
+    private GamePlayer gamePlayer = null;
+    private int delay = -1;
+    private final Map<String,  NearbyGame> gamesAroundMap;
+    private final Map<TrackedNode, ChronologyPlayer> gamePlayerMap;
+    private boolean isGamePlayer = false;
+    private long knownStateOrder = -1;
+    private long selfStateOrder = 0;
+    private int masterId = -1;
+    private MessageManager messageManager = null;
     private PingManager pingManager = null;
     private final RoleManager roleManager;
-    private SnakesProto.GameMessage lastStateMessage = null; // TODO занулять после выхода из игры
+    private SnakesProto.GameMessage lastStateMessage = null;
+
+    private Timer announcementTimer = null;
+    private Timer gameRoutineTimer = null;
     public ClientMain() {
         gamesAroundMap = new HashMap<>();
         gamePlayerMap = new HashMap<>();
@@ -57,6 +61,9 @@ public class ClientMain {
 
         messageManager = new MessageManager(gameConfig.getStateDelayMs() / 10, this);
         pingManager = new PingManager(this, gameConfig.getStateDelayMs() / 10);
+
+        announcementTimer = new Timer();
+        gameRoutineTimer = new Timer();
         startGameRoutine();
         startAnnouncement();
         isGamePlayer = true;
@@ -106,12 +113,11 @@ public class ClientMain {
         return gameMessageBuilder.build();
     }
     private void startGameRoutine() {
-        Timer timer = new Timer();
-        timer.scheduleAtFixedRate(new TimerTask() {
+        gameRoutineTimer.scheduleAtFixedRate(new TimerTask() {
             @Override
             public void run() {
                 if (Thread.currentThread().isInterrupted()) {
-                    timer.cancel();
+                    gameRoutineTimer.cancel();
                     return;
                 }
                 try {
@@ -175,12 +181,11 @@ public class ClientMain {
         return stats;
     }
     private void startAnnouncement() {
-        Timer timer = new Timer();
-        timer.scheduleAtFixedRate(new TimerTask() {
+        announcementTimer.scheduleAtFixedRate(new TimerTask() {
             @Override
             public void run() {
                 if (Thread.currentThread().isInterrupted()) {
-                    timer.cancel();
+                    announcementTimer.cancel();
                     return;
                 }
                 try {
@@ -234,7 +239,7 @@ public class ClientMain {
             if (masterId == -1) masterId = answer.gameMessage.getSenderId();
             if (this.gamePlayer.getId() == -1) this.gamePlayer.setID(answer.gameMessage.getReceiverId());
 //            if (knownStateOrder >= answer.gameMessage.getMsgSeq()) return;
-            if (clientGUI.boardView == null) { // TODO делать null в конце игры
+            if (clientGUI.boardView == null) {
                 SnakesProto.GameConfig gameConfig = gamesAroundMap.get(answer.senderIP).gameAnnouncement.getGames(0).getConfig();
                 PlayerStatistic selfPlayerStatistic = new PlayerStatistic(this.gamePlayer.getName(), 0, this.gamePlayer.getNodeRole());
                 PlayerStatistic hostPlayerStatistic = new PlayerStatistic(" ", 0, NodeRole.MASTER);
@@ -492,7 +497,6 @@ public class ClientMain {
         gameMessageBuilder.setPing(pingMessageBuilder);
 
         clientSocket.sendUnicastMessage(destIP, destPort, gameMessageBuilder.build());
-//        pingManager.rebootTrackedNode(new TrackedNode(destPort, destIP)); TODO без reboot потому что это уже есть внутри класса PingManager
         messageManager.addMessageToConfirmList(new UnconfirmedMessageInfo(destPort, destIP, gameMessageBuilder.getMsgSeq()), gameMessageBuilder.build());
     }
     public void processNodeDeath(TrackedNode node) {
@@ -508,11 +512,13 @@ public class ClientMain {
             String gameName = gamesAroundMap.get(deadHostIP).gameName;
             modelMain = new ModelMain(currentGameConfig, gameName, this, lastStateMessage);
             this.gamePlayer.setNodeRole(NodeRole.MASTER);
+            announcementTimer = new Timer();
+            gameRoutineTimer = new Timer();
             startGameRoutine();
             startAnnouncement();
 
             ArrayList<GamePlayer> allPlayers = new ArrayList<>(modelMain.getAllPlayers());
-            if (allPlayers.size() == 1) return; // TODO возвращать именно живых
+            if (allPlayers.size() == 1) return;
 
             TrackedNode newDeputy = roleManager.getPlayerWithRole(NodeRole.NORMAL);
             for (int i = 0; i < allPlayers.size(); i++) {
@@ -549,7 +555,7 @@ public class ClientMain {
             gamePlayerMap.remove(roleManager.getPlayerWithRole(NodeRole.DEPUTY));
 
             ArrayList<GamePlayer> allPlayers = new ArrayList<>(modelMain.getAllPlayers());
-            if (allPlayers.size() == 1) return; // TODO возвращать именно живых
+            if (allPlayers.size() == 1) return;
 
             TrackedNode newDeputy = roleManager.getPlayerWithRole(NodeRole.NORMAL);
             if (newDeputy == null) return;
@@ -631,9 +637,43 @@ public class ClientMain {
             seqNumber = -1;
         }
     }
-
     public void quitGame() {
+        if (messageManager != null) {
+        messageManager.clearMessageToConfirmList();
+        messageManager.interrupt();
+        messageManager = null;
+        }
 
+        if (pingManager != null) {
+            pingManager.interrupt();
+            pingManager = null;
+        }
+
+        if (announcementTimer != null) {
+            announcementTimer.cancel();
+            announcementTimer = null;
+        }
+
+        if (gameRoutineTimer != null) {
+            gameRoutineTimer.cancel();
+            gameRoutineTimer = null;
+        }
+
+        roleManager.clearAll();
+        gamePlayerMap.clear();
+
+        knownStateOrder = -1;
+        selfStateOrder = 0;
+        masterId = -1;
+        lastStateMessage = null;
+        delay = -1;
+        isGamePlayer = false;
+        gamePlayer = null;
+        modelMain = null;
+    }
+    public void quitMulticast() {
+        // Вызываем этот метод только при выходе из приложения
+        clientSocket.interrupt();
     }
     public static void main(String[] args) {
         ClientMain clientMain = new ClientMain();

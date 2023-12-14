@@ -6,7 +6,10 @@ import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.geom.Rectangle2D;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Random;
 import javax.swing.JComponent;
 public class BoardView {
     private int sizeX;
@@ -15,6 +18,8 @@ public class BoardView {
     private Rectangle2D[][] cells;
     private Color[][] colorMap;
     private TField tField;
+
+    private Map<Integer, Color> integerColorMap;
 
     private class TField extends JComponent {
 
@@ -37,6 +42,7 @@ public class BoardView {
     public BoardView(int sizeX, int sizeY, int gridSize, int startLeftCoord, int startUpperCoord) {
         this.sizeX = sizeX;
         this.sizeY = sizeY;
+        integerColorMap = new HashMap<>();
 
         tField = new TField();
         cells = new Rectangle2D[sizeX][sizeY];
@@ -47,6 +53,16 @@ public class BoardView {
                 cells[i][j] = new Rectangle2D.Double(x, y, gridSize, gridSize);
             }
     }
+
+    public static Color getRandomColor() {
+        Random random = new Random();
+        int red = random.nextInt(256);  // Случайное число от 0 до 255
+        int green = random.nextInt(256);
+        int blue = random.nextInt(256);
+
+        return new Color(red, green, blue);
+    }
+
     public void repaintField(SnakesProto.GameState gameState) {
         colorMap = new Color[sizeX][sizeY];
         List<SnakesProto.GameState.Coord> foods = gameState.getFoodsList();
@@ -56,6 +72,13 @@ public class BoardView {
 
         List<SnakesProto.GameState.Snake> snakes = gameState.getSnakesList();
         for (int i = 0; i < snakes.size(); i++) {
+            int playerId = snakes.get(i).getPlayerId();
+            Color playerColor = integerColorMap.get(playerId);
+            if (playerColor == null) {
+                playerColor = getRandomColor();
+                integerColorMap.put(playerId, playerColor);
+            }
+
             List<SnakesProto.GameState.Coord> coords = snakes.get(i).getPointsList();
             int posX = 0;
             int posY = 0;
@@ -74,28 +97,28 @@ public class BoardView {
                     posY += coords.get(j).getY();
                 }
                 if (prevPosX == posX) {
-                    repaintVerticalInterval(prevPosY, posY, posX);
+                    repaintVerticalInterval(prevPosY, posY, posX, playerColor);
                 }
                 if (prevPosY == posY) {
-                    repaintHorizontalInterval(prevPosX, posX, posY);
+                    repaintHorizontalInterval(prevPosX, posX, posY, playerColor);
                 }
                 prevPosX = posX;
                 prevPosY = posY;
             }
         }
     }
-    private void repaintVerticalInterval(int prevPosY, int posY, int constPosX) {
+    private void repaintVerticalInterval(int prevPosY, int posY, int constPosX, Color playerColor) {
         int leftBorder = Math.min(prevPosY, posY);
         int rightBorder = Math.max(prevPosY, posY);
         for (int i = leftBorder; i <= rightBorder; i++) {
-            colorMap[(constPosX % sizeX + sizeX) % sizeX][(i % sizeY + sizeY) % sizeY] = Color.BLUE;
+            colorMap[(constPosX % sizeX + sizeX) % sizeX][(i % sizeY + sizeY) % sizeY] = playerColor;
         }
     }
-    private void repaintHorizontalInterval(int prevPosX, int posX, int constPosY) {
+    private void repaintHorizontalInterval(int prevPosX, int posX, int constPosY, Color playerColor) {
         int leftBorder = Math.min(prevPosX, posX);
         int rightBorder = Math.max(prevPosX, posX);
         for (int i = leftBorder; i <= rightBorder; i++) {
-            colorMap[(i % sizeX + sizeX) % sizeX][(constPosY % sizeY + sizeY) % sizeY] = Color.BLUE;
+            colorMap[(i % sizeX + sizeX) % sizeX][(constPosY % sizeY + sizeY) % sizeY] = playerColor;
         }
     }
     public JComponent getField(){

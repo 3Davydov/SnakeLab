@@ -41,7 +41,8 @@ public class ModelMain {
         for (int i = 0; i < snakes.size(); i++) {
             SnakesProto.GameState.Snake.Builder snakeBuilder = SnakesProto.GameState.Snake.newBuilder();
             snakeBuilder.setState(SnakesProto.GameState.Snake.SnakeState.ALIVE);
-            snakeBuilder.setPlayerId(i + 1);
+            if (gameBoard.getGamePlayer(snakes.get(i)) != null)
+                snakeBuilder.setPlayerId(gameBoard.getGamePlayer(snakes.get(i)).getId());
             switch (snakes.get(i).getDirection()) {
                 case UP -> snakeBuilder.setHeadDirection(SnakesProto.Direction.UP);
                 case DOWN -> snakeBuilder.setHeadDirection(SnakesProto.Direction.DOWN);

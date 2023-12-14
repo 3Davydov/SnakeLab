@@ -28,8 +28,8 @@ import javax.swing.JTextField;
 import javax.swing.border.LineBorder;
 public class MainMenu implements ActionListener{
     private final Button newGameButton;
-    private Button ratingButton;
-    private Button currentGameButton;
+//    private Button ratingButton;
+//    private Button currentGameButton;
     private Button gameListButton;
     private Button exitButton;
 
@@ -49,8 +49,8 @@ public class MainMenu implements ActionListener{
         Dimension maxSize = new Dimension(300, 100);
 
         newGameButton = new Button("New Game", defaultColor, prefSize, minSize, maxSize, defaultFont, this);
-        ratingButton = new Button("Rating", defaultColor, prefSize, minSize, maxSize, defaultFont, this);
-        currentGameButton = new Button("Current Game", defaultColor, prefSize, minSize, maxSize, defaultFont, this);
+//        ratingButton = new Button("Rating", defaultColor, prefSize, minSize, maxSize, defaultFont, this);
+//        currentGameButton = new Button("Current Game", defaultColor, prefSize, minSize, maxSize, defaultFont, this);
         gameListButton = new Button("Game List", defaultColor, prefSize, minSize, maxSize, defaultFont, this);
         exitButton = new Button("Exit", defaultColor, prefSize, minSize, maxSize, defaultFont, this);
 
@@ -67,10 +67,10 @@ public class MainMenu implements ActionListener{
 
         sideBar.add(filler_1);
         sideBar.add(gameListButton.getButton());
-        sideBar.add(filler_2);
-        sideBar.add(currentGameButton.getButton());
-        sideBar.add(filler_3);
-        sideBar.add(ratingButton.getButton());
+//        sideBar.add(filler_2);
+//        sideBar.add(currentGameButton.getButton());
+//        sideBar.add(filler_3);
+//        sideBar.add(ratingButton.getButton());
         sideBar.add(filler_4);
         sideBar.add(exitButton.getButton());
 
@@ -124,7 +124,8 @@ public class MainMenu implements ActionListener{
         }
         if (e.getSource() == exitButton.getButton()) {
             mainFrame.dispose();
-            // TODO останавливать все scheduled таймеры
+            clientGUI.clientMain.quitGame();
+            clientGUI.clientMain.quitMulticast();
         }
     }
 
