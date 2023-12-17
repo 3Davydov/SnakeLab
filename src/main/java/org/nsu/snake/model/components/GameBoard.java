@@ -77,6 +77,9 @@ public class GameBoard {
             SnakesProto.GamePlayer srcPlayer = getPlayerByID(playerID, srcPlayers);
             if (srcPlayer == null) {
                 // It means that player is in VIEW mode
+                Snake newSnake = new Snake(newSnakeBody, newSnakeDirection, gameConfig.getWidth(), gameConfig.getHeight(), SnakeState.ZOMBIE);
+                newSnake.setPlayerID(playerID);
+                snakes.add(newSnake);
                 continue;
             }
             if (nextID <= playerID) nextID = (playerID + 1);
@@ -359,7 +362,6 @@ public class GameBoard {
     public void removeViewer(GamePlayer viewer) {
         viewPlayers.remove(viewer);
     }
-
     public boolean gamePlayerNameIsUnique(String name) {
         ArrayList<GamePlayer> players = new ArrayList<>(gamePlayerMap.values());
         ArrayList<GamePlayer> viewers = new ArrayList<>(viewPlayers);

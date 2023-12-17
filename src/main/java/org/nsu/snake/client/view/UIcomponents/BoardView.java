@@ -55,8 +55,8 @@ public class BoardView {
     }
 
     public static Color getRandomColor(int seed) {
-//        Random random = new Random(seed);
-        Random random = new Random();
+        Random random = new Random(seed);
+//        Random random = new Random();
         int red = random.nextInt(256);
         int green = random.nextInt(256);
         int blue = random.nextInt(256);

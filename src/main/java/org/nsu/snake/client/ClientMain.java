@@ -28,7 +28,6 @@ public class ClientMain {
     private PingManager pingManager = null;
     private final RoleManager roleManager;
     private SnakesProto.GameMessage lastStateMessage = null;
-
     private Timer announcementTimer = null;
     private Timer gameRoutineTimer = null;
     public ClientMain() {
@@ -139,6 +138,7 @@ public class ClientMain {
                                 clientGUI.repaintField(messageToSend.getState().getState(), getPlayersStatistic());
                         }
 
+
                         ArrayList<GamePlayer> viewersList = modelMain.getAllViewers();
                         for (GamePlayer player : viewersList) {
                             clientSocket.sendUnicastMessage(player.getIpAddress(), player.getPort(), messageToSend);
@@ -160,6 +160,12 @@ public class ClientMain {
         ArrayList<GamePlayer> playersList = modelMain.getAllPlayers();
         for (int i = 0; i < playersList.size(); i++) {
             PlayerStatistic ps = new PlayerStatistic(playersList.get(i).getName(), playersList.get(i).getScore(), playersList.get(i).getNodeRole());
+            stats.add(ps);
+        }
+
+        ArrayList<GamePlayer> viewersList = modelMain.getAllViewers();
+        for (int i = 0; i < viewersList.size(); i++) {
+            PlayerStatistic ps = new PlayerStatistic(viewersList.get(i).getName(), viewersList.get(i).getScore(), NodeRole.VIEWER);
             stats.add(ps);
         }
         return stats;
@@ -508,6 +514,7 @@ public class ClientMain {
     public void processNodeDeath(TrackedNode node) {
         messageManager.clearMessageToConfirmList();
         NodeRole deadNodeRole = roleManager.getPlayerRole(node);
+        if (deadNodeRole == null) return;
         System.out.println("NODE WITH ROLE " + deadNodeRole + " DEAD");
         if (this.gamePlayer.getNodeRole().equals(NodeRole.DEPUTY) && deadNodeRole.equals(NodeRole.MASTER)) {
             String deadHostIP = roleManager.getPlayerWithRole(NodeRole.MASTER).ip;
@@ -557,9 +564,12 @@ public class ClientMain {
             this.gamePlayer.setHost(deputy.ip, deputy.port);
         }
         else if (this.gamePlayer.getNodeRole().equals(NodeRole.MASTER) && deadNodeRole.equals(NodeRole.DEPUTY)) {
-            GamePlayer removingPlayer = gamePlayerMap.get(roleManager.getPlayerWithRole(NodeRole.DEPUTY)).player;
-            modelMain.removePlayer(removingPlayer);
-            gamePlayerMap.remove(roleManager.getPlayerWithRole(NodeRole.DEPUTY));
+            ChronologyPlayer p = gamePlayerMap.get(roleManager.getPlayerWithRole(NodeRole.DEPUTY));
+            if (p != null) {
+                GamePlayer removingPlayer = p.player;
+                modelMain.removePlayer(removingPlayer);
+                gamePlayerMap.remove(roleManager.getPlayerWithRole(NodeRole.DEPUTY));
+            }
 
             ArrayList<GamePlayer> allPlayers = new ArrayList<>(modelMain.getAllPlayers());
             if (allPlayers.size() == 1) return;
@@ -646,6 +656,13 @@ public class ClientMain {
     }
     public void quitGame() {
         isGamePlayer = false;
+//        TrackedNode master = roleManager.getPlayerWithRole(NodeRole.MASTER);
+//        try {
+//            if (master != null)
+//                sendRoleChangeMessage(NodeRole.VIEWER, NodeRole.MASTER, master.port, master.ip, masterId, this.gamePlayer.getId());
+//        } catch (IOException e) {
+//            throw new RuntimeException(e);
+//        }
         if (messageManager != null) {
         messageManager.clearMessageToConfirmList();
         messageManager.interrupt();
