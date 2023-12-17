@@ -12,6 +12,7 @@ public class Snake {
     private final int fieldWidth;
     private final int fieldHeight;
     private SnakeState snakeState;
+    private int playerId;
 
     public Snake(Cell head, Direction direction, int newWidth, int newHeight, SnakeState state) {
         body = new ArrayList<>();
@@ -36,6 +37,12 @@ public class Snake {
         fieldHeight = 0;
         fieldWidth = 0;
     }
+
+    // We use player ID only for dead player's snake (because this player already deleted from Map)
+    public void setPlayerID(int id) {
+        this.playerId = id;
+    }
+    public int getPlayerId() {return this.playerId;}
 
     public SnakeState getSnakeState() {return this.snakeState;}
 

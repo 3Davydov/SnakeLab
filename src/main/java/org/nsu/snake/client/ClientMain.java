@@ -210,8 +210,10 @@ public class ClientMain {
                 ArrayList<SnakesProto.GamePlayer> srcPlayers = new ArrayList<>(answer.gameMessage.getState().getState().getPlayers().getPlayersList());
                 clientGUI.repaintField(answer.gameMessage.getState().getState(), getPlayersStatistic(srcPlayers));
                 knownStateOrder = answer.gameMessage.getMsgSeq();
-                roleManager.refreshPlayerRoles(answer.gameMessage.getState().getState().getPlayers());
-                this.gamePlayer.setNodeRole(roleManager.getPlayerRole(this.gamePlayer));
+                if (roleManager != null)
+                    roleManager.refreshPlayerRoles(answer.gameMessage.getState().getState().getPlayers());
+                if (this.gamePlayer != null)
+                    this.gamePlayer.setNodeRole(roleManager.getPlayerRole(this.gamePlayer));
                 lastStateMessage = answer.gameMessage;
                 try {
                     sendAckMessage(masterId, answer.senderPort, answer.senderIP, answer.gameMessage.getMsgSeq());
@@ -234,8 +236,10 @@ public class ClientMain {
                                 answer.gameMessage.getAnnouncement().getGames(0).getGameName()));
         }
         else if (answer.gameMessage.getTypeCase().equals(SnakesProto.GameMessage.TypeCase.ACK)) {
-            pingManager.rebootTrackedNode_receive(new TrackedNode(answer.senderPort, answer.senderIP));
-            messageManager.removeMessageFromConfirmList(new UnconfirmedMessageInfo(answer.senderPort, answer.senderIP, answer.gameMessage.getMsgSeq()));
+            if (pingManager != null && messageManager != null) {
+                pingManager.rebootTrackedNode_receive(new TrackedNode(answer.senderPort, answer.senderIP));
+                messageManager.removeMessageFromConfirmList(new UnconfirmedMessageInfo(answer.senderPort, answer.senderIP, answer.gameMessage.getMsgSeq()));
+            }
             if (masterId == -1) masterId = answer.gameMessage.getSenderId();
             if (this.gamePlayer.getId() == -1) this.gamePlayer.setID(answer.gameMessage.getReceiverId());
 //            if (knownStateOrder >= answer.gameMessage.getMsgSeq()) return;
@@ -252,7 +256,7 @@ public class ClientMain {
                 isGamePlayer = true;
             }
         }
-        else if (answer.gameMessage.getTypeCase().equals(SnakesProto.GameMessage.TypeCase.STEER)) {
+        else if (answer.gameMessage.getTypeCase().equals(SnakesProto.GameMessage.TypeCase.STEER) && isGamePlayer) {
             pingManager.rebootTrackedNode_receive(new TrackedNode(answer.senderPort, answer.senderIP));
             if (gamePlayerMap.get(new TrackedNode(answer.senderPort, answer.senderIP)) == null) {
                 System.out.println("GOT STEER MESSAGE FROM UNKNOWN PLAYER");
@@ -279,7 +283,7 @@ public class ClientMain {
                 throw new RuntimeException(e);
             }
         }
-        else if (answer.gameMessage.getTypeCase().equals(SnakesProto.GameMessage.TypeCase.JOIN)) {
+        else if (answer.gameMessage.getTypeCase().equals(SnakesProto.GameMessage.TypeCase.JOIN) && isGamePlayer) {
             System.out.println("JOIN REQUEST");
             SnakesProto.GameMessage.JoinMsg joinMsg = answer.gameMessage.getJoin();
             if (!modelMain.gamePlayerNameIsUnique(joinMsg.getPlayerName())) {
@@ -321,7 +325,7 @@ public class ClientMain {
                 throw new RuntimeException(e);
             }
         }
-        else if (answer.gameMessage.getTypeCase().equals(SnakesProto.GameMessage.TypeCase.PING)) {
+        else if (answer.gameMessage.getTypeCase().equals(SnakesProto.GameMessage.TypeCase.PING) && isGamePlayer) {
             pingManager.rebootTrackedNode_receive(new TrackedNode(answer.senderPort, answer.senderIP));
 
             if (this.gamePlayer.getNodeRole().equals(NodeRole.MASTER)) {
@@ -342,7 +346,8 @@ public class ClientMain {
         }
         else if (answer.gameMessage.getTypeCase().equals(SnakesProto.GameMessage.TypeCase.ERROR)) {
             System.out.println("GOT ERROR MESSAGE");
-            pingManager.rebootTrackedNode_receive(new TrackedNode(answer.senderPort, answer.senderIP));
+            if (pingManager != null)
+                pingManager.rebootTrackedNode_receive(new TrackedNode(answer.senderPort, answer.senderIP));
             try {
                 sendAckMessage(answer.gameMessage.getSenderId(), answer.senderPort, answer.senderIP, answer.gameMessage.getMsgSeq());
             } catch (IOException e) {
@@ -352,7 +357,7 @@ public class ClientMain {
                 clientGUI.displayError(answer.gameMessage.getError().getErrorMessage());
             }
         }
-        else if (answer.gameMessage.getTypeCase().equals(SnakesProto.GameMessage.TypeCase.ROLE_CHANGE)) {
+        else if (answer.gameMessage.getTypeCase().equals(SnakesProto.GameMessage.TypeCase.ROLE_CHANGE) && isGamePlayer) {
             pingManager.rebootTrackedNode_receive(new TrackedNode(answer.senderPort, answer.senderIP));
             NodeRole senderRole = NodeRole.MASTER;
             NodeRole receiverRole = NodeRole.NORMAL;
@@ -416,6 +421,7 @@ public class ClientMain {
         return;
     }
     private void sendAckMessage(int receiverID, int receiverPort, String receiverIP, long seq) throws IOException {
+        if (this.gamePlayer == null) return;
         SnakesProto.GameMessage.Builder gameMessageBuilder = SnakesProto.GameMessage.newBuilder();
         gameMessageBuilder.setSenderId(gamePlayer.getId());
         gameMessageBuilder.setReceiverId(receiverID);
@@ -639,6 +645,7 @@ public class ClientMain {
         }
     }
     public void quitGame() {
+        isGamePlayer = false;
         if (messageManager != null) {
         messageManager.clearMessageToConfirmList();
         messageManager.interrupt();
@@ -668,7 +675,6 @@ public class ClientMain {
         masterId = -1;
         lastStateMessage = null;
         delay = -1;
-        isGamePlayer = false;
         gamePlayer = null;
         modelMain = null;
     }

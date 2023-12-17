@@ -86,19 +86,19 @@ public class ClientGUI {
             public void keyPressed(KeyEvent e) {}
             @Override
             public void keyReleased(KeyEvent e) {
-                if (e.getKeyChar() == 'a' || e.getKeyChar() == 'ф') {
+                if (e.getKeyChar() == 'a') {
                     if (staticDirection != Direction.RIGHT)
                         currentDirection = Direction.LEFT;
                 }
-                else if (e.getKeyChar() == 's' || e.getKeyChar() == 'ы') {
+                else if (e.getKeyChar() == 's') {
                     if (staticDirection != Direction.UP)
                         currentDirection = Direction.DOWN;
                 }
-                else if (e.getKeyChar() == 'd' || e.getKeyChar() == 'в') {
+                else if (e.getKeyChar() == 'd') {
                     if (staticDirection != Direction.LEFT)
                         currentDirection = Direction.RIGHT;
                 }
-                else if (e.getKeyChar() == 'w' || e.getKeyChar() == 'ц') {
+                else if (e.getKeyChar() == 'w') {
                     if (staticDirection != Direction.DOWN)
                         currentDirection = Direction.UP;
                 }
@@ -112,7 +112,8 @@ public class ClientGUI {
             }
         };
     }
-    public void repaintField(SnakesProto.GameState gameState, ArrayList<PlayerStatistic> data) {
+    synchronized public void repaintField(SnakesProto.GameState gameState, ArrayList<PlayerStatistic> data) {
+        if (gameStatistics == null || boardView == null) return;
         boardView.repaintField(gameState);
         gameStatistics.printTable(data);
 
@@ -181,7 +182,7 @@ public class ClientGUI {
     public void displayError(String err) {
         JOptionPane.showMessageDialog(mainFrame, err);
     }
-    public void quitGame() {
+    synchronized public void quitGame() {
         returnToPrevView();
         boardView = null;
         gameStatistics = null;

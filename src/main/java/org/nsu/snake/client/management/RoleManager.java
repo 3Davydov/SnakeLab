@@ -43,6 +43,7 @@ public class RoleManager {
     }
 
     public NodeRole getPlayerRole(GamePlayer player) {
+        if (player == null) return null;
         TrackedNode trackedNode = new TrackedNode(player.getPort(), player.getIpAddress());
         return nodeRoleMap.get(trackedNode);
     }

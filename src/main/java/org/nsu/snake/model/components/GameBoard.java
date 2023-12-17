@@ -89,6 +89,7 @@ public class GameBoard {
             }
             if (newPlayerRole == NodeRole.MASTER) {
                 Snake newSnake = new Snake(newSnakeBody, newSnakeDirection, gameConfig.getWidth(), gameConfig.getHeight(), SnakeState.ZOMBIE);
+                newSnake.setPlayerID(playerID);
                 snakes.add(newSnake);
                 continue;
             }
