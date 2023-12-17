@@ -521,6 +521,7 @@ public class ClientMain {
             if (allPlayers.size() == 1) return;
 
             TrackedNode newDeputy = roleManager.getPlayerWithRole(NodeRole.NORMAL);
+            if (newDeputy == null) return;
             for (int i = 0; i < allPlayers.size(); i++) {
                 if (allPlayers.get(i).equals(gamePlayer)) {
                     continue;

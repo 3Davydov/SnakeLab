@@ -54,9 +54,9 @@ public class BoardView {
             }
     }
 
-    public static Color getRandomColor() {
-        Random random = new Random();
-        int red = random.nextInt(256);  // Случайное число от 0 до 255
+    public static Color getRandomColor(int seed) {
+        Random random = new Random(seed);
+        int red = random.nextInt(256);
         int green = random.nextInt(256);
         int blue = random.nextInt(256);
 
@@ -75,7 +75,7 @@ public class BoardView {
             int playerId = snakes.get(i).getPlayerId();
             Color playerColor = integerColorMap.get(playerId);
             if (playerColor == null) {
-                playerColor = getRandomColor();
+                playerColor = getRandomColor(playerId);
                 integerColorMap.put(playerId, playerColor);
             }
 

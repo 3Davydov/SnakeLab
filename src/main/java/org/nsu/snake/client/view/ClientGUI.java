@@ -86,19 +86,19 @@ public class ClientGUI {
             public void keyPressed(KeyEvent e) {}
             @Override
             public void keyReleased(KeyEvent e) {
-                if (e.getKeyChar() == 'a') {
+                if (e.getKeyChar() == 'a' || e.getKeyChar() == 'ф') {
                     if (staticDirection != Direction.RIGHT)
                         currentDirection = Direction.LEFT;
                 }
-                else if (e.getKeyChar() == 's') {
+                else if (e.getKeyChar() == 's' || e.getKeyChar() == 'ы') {
                     if (staticDirection != Direction.UP)
                         currentDirection = Direction.DOWN;
                 }
-                else if (e.getKeyChar() == 'd') {
+                else if (e.getKeyChar() == 'd' || e.getKeyChar() == 'в') {
                     if (staticDirection != Direction.LEFT)
                         currentDirection = Direction.RIGHT;
                 }
-                else if (e.getKeyChar() == 'w') {
+                else if (e.getKeyChar() == 'w' || e.getKeyChar() == 'ц') {
                     if (staticDirection != Direction.DOWN)
                         currentDirection = Direction.UP;
                 }
@@ -123,6 +123,7 @@ public class ClientGUI {
         choiseWindow.repaint();
 
         actionWindow.repaint();
+        actionWindow.requestFocusInWindow();
     }
     public void showGamesList(ArrayList<GameInfo> data) {
         actionWindow.removeAll();

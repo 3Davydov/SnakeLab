@@ -323,14 +323,12 @@ public class GameBoard {
     }
     public void replaceSnakeWithFood(Snake snake) {
         Random random = new Random();
-        if (random.nextDouble() < 0.5) {
-            int realX = 0;
-            int realY = 0;
-            for (int i = 0; i < snake.getBody().size(); i++) {
-                realX += snake.getBody().get(i).x;
-                realY += snake.getBody().get(i).y;
-                foods.add(new Food(new Cell(realX, realY)));
-            }
+        int realX = 0;
+        int realY = 0;
+        for (int i = 0; i < snake.getBody().size(); i++) {
+            realX += snake.getBody().get(i).x;
+            realY += snake.getBody().get(i).y;
+            if (random.nextBoolean()) foods.add(new Food(new Cell(realX, realY)));
         }
     }
     public ArrayList<GamePlayer> getPlayers() {

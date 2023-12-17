@@ -38,26 +38,30 @@ public class ModelMain {
         gameStateBuilder.setStateOrder(stateOrder);
 
         ArrayList<Snake> snakes = gameBoard.getSnakes();
-        for (int i = 0; i < snakes.size(); i++) {
-            SnakesProto.GameState.Snake.Builder snakeBuilder = SnakesProto.GameState.Snake.newBuilder();
-            snakeBuilder.setState(SnakesProto.GameState.Snake.SnakeState.ALIVE);
-            if (gameBoard.getGamePlayer(snakes.get(i)) != null)
-                snakeBuilder.setPlayerId(gameBoard.getGamePlayer(snakes.get(i)).getId());
-            switch (snakes.get(i).getDirection()) {
-                case UP -> snakeBuilder.setHeadDirection(SnakesProto.Direction.UP);
-                case DOWN -> snakeBuilder.setHeadDirection(SnakesProto.Direction.DOWN);
-                case LEFT -> snakeBuilder.setHeadDirection(SnakesProto.Direction.LEFT);
-                case RIGHT -> snakeBuilder.setHeadDirection(SnakesProto.Direction.RIGHT);
-            }
+        try {
+            for (int i = 0; i < snakes.size(); i++) {
+                SnakesProto.GameState.Snake.Builder snakeBuilder = SnakesProto.GameState.Snake.newBuilder();
+                snakeBuilder.setState(SnakesProto.GameState.Snake.SnakeState.ALIVE);
+                if (gameBoard.getGamePlayer(snakes.get(i)) != null)
+                    snakeBuilder.setPlayerId(gameBoard.getGamePlayer(snakes.get(i)).getId());
+                switch (snakes.get(i).getDirection()) {
+                    case UP -> snakeBuilder.setHeadDirection(SnakesProto.Direction.UP);
+                    case DOWN -> snakeBuilder.setHeadDirection(SnakesProto.Direction.DOWN);
+                    case LEFT -> snakeBuilder.setHeadDirection(SnakesProto.Direction.LEFT);
+                    case RIGHT -> snakeBuilder.setHeadDirection(SnakesProto.Direction.RIGHT);
+                }
 
-            ArrayList<Cell> sourceKeyPoints = snakes.get(i).getKeyPoints();
-            for (int j = 0; j < sourceKeyPoints.size(); j++) {
-                SnakesProto.GameState.Coord.Builder snakeCoordBuilder = SnakesProto.GameState.Coord.newBuilder();
-                snakeCoordBuilder.setX(sourceKeyPoints.get(j).x);
-                snakeCoordBuilder.setY(sourceKeyPoints.get(j).y);
-                snakeBuilder.addPoints(snakeCoordBuilder);
+                ArrayList<Cell> sourceKeyPoints = snakes.get(i).getKeyPoints();
+                for (int j = 0; j < sourceKeyPoints.size(); j++) {
+                    SnakesProto.GameState.Coord.Builder snakeCoordBuilder = SnakesProto.GameState.Coord.newBuilder();
+                    snakeCoordBuilder.setX(sourceKeyPoints.get(j).x);
+                    snakeCoordBuilder.setY(sourceKeyPoints.get(j).y);
+                    snakeBuilder.addPoints(snakeCoordBuilder);
+                }
+                gameStateBuilder.addSnakes(snakeBuilder);
             }
-            gameStateBuilder.addSnakes(snakeBuilder);
+        } catch (ExceptionInInitializerError err) {
+            err.printStackTrace();
         }
 
         ArrayList<Food> foods = gameBoard.getFoods();

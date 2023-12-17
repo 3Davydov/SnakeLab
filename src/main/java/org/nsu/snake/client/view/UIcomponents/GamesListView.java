@@ -54,14 +54,11 @@ public class GamesListView {
         public Dimension preferredLayoutSize(Container c) {
             return calculateBestSize(c);
         }
-
         @Override
         public Dimension minimumLayoutSize(Container c) {
             return calculateBestSize(c);
         }
-
         private Dimension size = new Dimension();
-
         private Dimension calculateBestSize(Container c) {
             Component[] comps = c.getComponents();
             int maxWidth = 0;
@@ -78,7 +75,6 @@ public class GamesListView {
             size.height = height;
             return size;
         }
-
         @Override
         public void layoutContainer(Container c) {
             Component comps[] = c.getComponents();
@@ -92,11 +88,9 @@ public class GamesListView {
         }
 
     }
-
     public JPanel getTable() {
         return this.table;
     }
-
     public void printTable(ArrayList<GameInfo> newData) {
         this.data = newData;
         table.removeAll();
